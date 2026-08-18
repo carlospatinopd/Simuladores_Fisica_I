@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Vectores | Notación LaTeX Nativa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;1,600&display=swap" rel="stylesheet">
+    
+    <!-- KaTeX para renderizar LaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --vec-a: #ef4444; 
+            --vec-b: #3b82f6; 
+            --vec-r: #10b981; 
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 2rem;
+            background: var(--panel-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .sidebar {
+            flex: 1;
+            min-width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .header h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .header p { color: var(--text-muted); font-size: 0.875rem; }
+
+        .card {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            background: #fafafa;
+        }
+
+        .card-header {
+            display: flex; align-items: center; gap: 0.5rem;
+            margin-bottom: 1rem; font-weight: 600; font-size: 0.95rem;
+        }
+
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot.a { background-color: var(--vec-a); }
+        .dot.b { background-color: var(--vec-b); }
+        .dot.r { background-color: var(--vec-r); }
+
+        .inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .input-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        
+        label { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); }
+        input[type="number"], select {
+            width: 100%; padding: 0.6rem;
+            border: 1px solid var(--border-color); border-radius: 8px;
+            font-family: inherit; font-size: 0.95rem; outline: none;
+        }
+        input[type="number"]:focus, select:focus {
+            border-color: var(--vec-b); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .result-card { background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2); }
+        .result-value {
+            font-size: 1.4rem; font-weight: 600; color: var(--vec-r);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .canvas-container {
+            position: relative; background: #ffffff;
+            border: 1px solid var(--border-color); border-radius: 12px;
+            overflow: hidden; display: flex; align-items: center; justify-content: center;
+            padding: 10px; /* Ligero margen interno */
+        }
+        
+        /* Contenedor relativo que empareja exactamente el tamaño del canvas */
+        .canvas-wrapper {
+            position: relative;
+            width: 550px;
+            height: 550px;
+        }
+
+        canvas { display: block; }
+        
+        /* Capa superpuesta para inyectar las etiquetas HTML/LaTeX */
+        #labels-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Permite que los clics pasen al canvas si fuera necesario */
+        }
+
+        .vector-label {
+            position: absolute;
+            transform: translate(-50%, -50%); /* Centrado exacto en la coordenada X,Y */
+            font-size: 1.15rem;
+            font-weight: bold;
+        }
+
+        /* Ajustes finos para KaTeX en la UI */
+        .katex { font-size: 1.1em; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="header">
+                <h1>Cinemática de Vectores</h1>
+                <p>Análisis en el plano cartesiano $\mathbb{R}^2$</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><div class="dot a"></div>Vector $\vec{A}$</div>
+                <div class="inputs-grid">
+                    <div class="input-group">
+                        <label>Componente $x$</label>
+                        <input type="number" id="ax" value="4" step="1" oninput="draw()">
+                    </div>
+                    <div class="input-group">
+                        <label>Componente $y$</label>
+                        <input type="number" id="ay" value="3" step="1" oninput="draw()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><div class="dot b"></div>Vector $\vec{B}$</div>
+                <div class="inputs-grid">
+                    <div class="input-group">
+                        <label>Componente $x$</label>
+                        <input type="number" id="bx" value="-2" step="1" oninput="draw()">
+                    </div>
+                    <div class="input-group">
+                        <label>Componente $y$</label>
+                        <input type="number" id="by" value="5" step="1" oninput="draw()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="input-group">
+                    <label>Operación Algebraica</label>
+                    <select id="operation" onchange="draw()">
+                        <!-- Texto plano para evitar errores de renderizado en el select -->
+                        <option value="add">Adición (A + B)</option>
+                        <option value="sub">Sustracción (A - B)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card result-card">
+                <div class="card-header"><div class="dot r"></div>Vector Resultante $\vec{R}$</div>
+                <div class="result-value" id="result-text">$\vec{R} = (2, 8)$</div>
+            </div>
+        </aside>
+
+        <section class="canvas-container">
+            <div class="canvas-wrapper">
+                <canvas id="canvas" width="550" height="550"></canvas>
+                <!-- Capa donde vivirán las etiquetas matemáticas -->
+                <div id="labels-container"></div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        const scale = 30; 
+        const originX = width / 2;
+        const originY = height / 2;
+
+        const colors = {
+            a: '#ef4444',
+            b: '#3b82f6',
+            bProj: 'rgba(59, 130, 246, 0.4)',
+            r: '#10b981'
+        };
+
+        function drawArrow(fromx, fromy, tox, toy, color, textLabel, dashed = false) {
+            const headlen = 10; 
+            const dx = tox - fromx;
+            const dy = toy - fromy;
+            const length = Math.sqrt(dx*dx + dy*dy);
+            const angle = Math.atan2(dy, dx);
+
+            if (length === 0) return;
+
+            // Dibujar la línea principal
+            ctx.beginPath();
+            ctx.moveTo(fromx, fromy);
+            ctx.lineTo(tox, toy);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            if (dashed) ctx.setLineDash([6, 6]);
+            else ctx.setLineDash([]);
+            ctx.stroke();
+            ctx.setLineDash([]); 
+
+            // Dibujar la punta de flecha
+            ctx.beginPath();
+            ctx.moveTo(tox, toy);
+            ctx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 7), toy - headlen * Math.sin(angle - Math.PI / 7));
+            ctx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 7), toy - headlen * Math.sin(angle + Math.PI / 7));
+            ctx.lineTo(tox, toy);
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            // Inyectar etiqueta HTML en el contenedor superior para renderizar LaTeX
+            if (textLabel) {
+                const midX = (fromx + tox) / 2;
+                const midY = (fromy + toy) / 2;
+                
+                // Vector normal para alejar la etiqueta de la línea
+                let nx = -dy / length;
+                let ny = dx / length;
+                if (ny > 0) { nx = -nx; ny = -ny; }
+                
+                const offset = 22;
+                const labelX = midX + nx * offset;
+                const labelY = midY + ny * offset;
+
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'vector-label';
+                labelDiv.style.left = labelX + 'px';
+                labelDiv.style.top = labelY + 'px';
+                labelDiv.style.color = color;
+                
+                // Ajustar si la etiqueta es negativa (ej. -B)
+                let latexString = textLabel === '-B' ? '-\\vec{B}' : `\\vec{${textLabel}}`;
+                labelDiv.innerHTML = `$${latexString}$`;
+                
+                document.getElementById('labels-container').appendChild(labelDiv);
+            }
+        }
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, width, height);
+            
+            ctx.fillStyle = '#fafcff';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#cbd5e1'; 
+            ctx.setLineDash([2, 4]); 
+            
+            for (let i = 0; i <= width; i += scale) {
+                if (i !== originX) {
+                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke();
+                }
+            }
+            for (let i = 0; i <= height; i += scale) {
+                if (i !== originY) {
+                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(width, i); ctx.stroke();
+                }
+            }
+            ctx.setLineDash([]); 
+
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1.5;
+            
+            ctx.beginPath(); ctx.moveTo(originX, 0); ctx.lineTo(originX, height); ctx.stroke(); 
+            ctx.beginPath(); ctx.moveTo(0, originY); ctx.lineTo(width, originY); ctx.stroke();
+
+            const arrowSize = 8;
+            ctx.fillStyle = '#000000';
+            
+            ctx.beginPath(); ctx.moveTo(width, originY); 
+            ctx.lineTo(width - arrowSize, originY - arrowSize/1.5); 
+            ctx.lineTo(width - arrowSize, originY + arrowSize/1.5); ctx.fill();
+            
+            ctx.beginPath(); ctx.moveTo(0, originY); 
+            ctx.lineTo(arrowSize, originY - arrowSize/1.5); 
+            ctx.lineTo(arrowSize, originY + arrowSize/1.5); ctx.fill();
+
+            ctx.beginPath(); ctx.moveTo(originX, 0); 
+            ctx.lineTo(originX - arrowSize/1.5, arrowSize); 
+            ctx.lineTo(originX + arrowSize/1.5, arrowSize); ctx.fill();
+            
+            ctx.beginPath(); ctx.moveTo(originX, height); 
+            ctx.lineTo(originX - arrowSize/1.5, height - arrowSize); 
+            ctx.lineTo(originX + arrowSize/1.5, height - arrowSize); ctx.fill();
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = "11px 'Inter'";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            for (let i = -10; i <= 10; i++) {
+                if (i !== 0 && i % 2 === 0) { 
+                    ctx.fillText(i, originX + i * scale, originY + 14);
+                    ctx.fillText(i, originX - 14, originY - i * scale);
+                }
+            }
+            
+            ctx.font = "italic 14px 'Inter'";
+            ctx.fillStyle = '#000000';
+            ctx.fillText("x", width - 15, originY - 15);
+            ctx.fillText("y", originX + 15, 15);
+        }
+
+        function draw() {
+            const ax = parseFloat(document.getElementById('ax').value) || 0;
+            const ay = parseFloat(document.getElementById('ay').value) || 0;
+            const bx = parseFloat(document.getElementById('bx').value) || 0;
+            const by = parseFloat(document.getElementById('by').value) || 0;
+            const op = document.getElementById('operation').value;
+
+            // Limpiar la grilla y el contenedor de etiquetas
+            drawGrid();
+            document.getElementById('labels-container').innerHTML = '';
+
+            const axPx = originX + ax * scale;
+            const ayPx = originY - ay * scale; 
+            const bxPx = originX + bx * scale;
+            const byPx = originY - by * scale;
+
+            let rx = 0, ry = 0;
+
+            if (op === 'add') {
+                rx = ax + bx; ry = ay + by;
+                drawArrow(axPx, ayPx, axPx + bx * scale, ayPx - by * scale, colors.bProj, 'B', true);
+                
+                drawArrow(originX, originY, bxPx, byPx, colors.b, 'B');
+                drawArrow(originX, originY, axPx, ayPx, colors.a, 'A');
+            } else if (op === 'sub') {
+                rx = ax - bx; ry = ay - by;
+                drawArrow(axPx, ayPx, axPx - bx * scale, ayPx + by * scale, colors.bProj, '-B', true);
+                
+                drawArrow(originX, originY, bxPx, byPx, colors.b, 'B');
+                drawArrow(originX, originY, axPx, ayPx, colors.a, 'A');
+            }
+
+            const rxPx = originX + rx * scale;
+            const ryPx = originY - ry * scale;
+            drawArrow(originX, originY, rxPx, ryPx, colors.r, 'R');
+
+            // Actualizar panel de resultados
+            const resultElement = document.getElementById('result-text');
+            resultElement.innerHTML = `$\\vec{R} = (${rx}, ${ry})$`;
+            
+            // Re-renderizar todo KaTeX en la UI después de actualizar DOM
+            if (window.renderMathInElement) {
+                renderMathInElement(document.getElementById('labels-container'), {
+                    delimiters: [{left: '$', right: '$', display: false}]
+                });
+                renderMathInElement(resultElement, {
+                    delimiters: [{left: '$', right: '$', display: false}]
+                });
+            }
+        }
+
+        // Inicialización
+        window.onload = () => {
+            if (window.renderMathInElement) {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false}
+                    ],
+                    throwOnError : false
+                });
+            }
+            draw();
+        };
+    </script>
+</body>
+</html>
